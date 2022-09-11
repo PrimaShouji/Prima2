@@ -310,7 +310,6 @@ namespace Prima.Stable.Modules
                 if (encounter.Difficulty == 100)
                 {
                     Log.Error("Encounter {Encounter} does not appear to be a Savage encounter", encounter.Name);
-                    await ReplyAsync("Encounter does not appear to be a Savage encounter");
                     continue;
                 }
                 var roleName = encounter.Name;
