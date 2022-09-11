@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Security.Policy;
 
 namespace Prima.Stable.Models.FFLogs
 {
@@ -35,6 +36,9 @@ namespace Prima.Stable.Models.FFLogs
 
                         [JsonProperty("friendlyPlayers")]
                         public int[] FriendlyPlayers { get; set; }
+
+                        [JsonProperty("difficulty")]
+                        public int? Difficulty { get; set; }
                     }
 
                     public class Master

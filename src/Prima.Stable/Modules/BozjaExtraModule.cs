@@ -307,6 +307,12 @@ namespace Prima.Stable.Modules
             var addedAny = false;
             foreach (var encounter in encounters)
             {
+                if (encounter.Difficulty == 100)
+                {
+                    Log.Error("Encounter {Encounter} does not appear to be a Savage encounter", encounter.Name);
+                    await ReplyAsync("Encounter does not appear to be a Savage encounter");
+                    continue;
+                }
                 var roleName = encounter.Name;
                 if (roleName == "The Queen's Guard")
                     roleName = "Queen's Guard";
