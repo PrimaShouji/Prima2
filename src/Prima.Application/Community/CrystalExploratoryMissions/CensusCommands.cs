@@ -455,7 +455,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             Log.Error("Failed to unmarshal ClassJobs from Lodestone character (id={LodestoneId})", lodestoneId);
             return;
         }
-        
+
         var highestCombatLevel = 0;
         foreach (var classJob in classJobsObj)
         {
