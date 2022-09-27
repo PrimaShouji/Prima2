@@ -397,7 +397,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     private const ulong EurekaRole = 588913087818498070;
     private const ulong DiademRole = 588913444712087564;
 
-    private async Task ActivateUser(IGuildUser member, string oldLodestoneId, DiscordXIVUser dbEntry,
+    private async Task ActivateUser(IGuildUser member, string? oldLodestoneId, DiscordXIVUser dbEntry,
         DiscordGuildConfiguration guildConfig)
     {
         var memberRole = member.Guild.GetRole(ulong.Parse(guildConfig.Roles["Member"]));
