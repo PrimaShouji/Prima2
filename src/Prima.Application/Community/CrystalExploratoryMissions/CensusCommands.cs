@@ -444,12 +444,21 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     private const ulong EurekaRole = 588913087818498070;
     private const ulong DiademRole = 588913444712087564;
 
-    private async Task ActivateUser(IGuildUser member, string? oldLodestoneId, DiscordXIVUser dbEntry,
+    private async Task ActivateUser(IGuildUser? member, string? oldLodestoneId, DiscordXIVUser dbEntry,
         DiscordGuildConfiguration guildConfig)
     {
+        member ??= await Context.Client.Rest.GetGuildUserAsync(guildConfig.Id, dbEntry.DiscordId);
+        if (member == null)
+        {
+            _logger.LogWarning("Failed to get guild user {UserId}", dbEntry.DiscordId);
+            await ReplyAsync("Failed to get guild user!");
+            return;
+        }
+        
         var memberRole = GetConfiguredRole(guildConfig, "Member");
         if (memberRole == null)
         {
+            _logger.LogWarning("No member role configured for guild {GuildName}", Context.Guild.Name);
             await ReplyAsync("No member role is configured!");
             return;
         }
@@ -491,6 +500,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         if (data == null)
         {
             _logger.LogError("Failed to get Lodestone character (id={LodestoneId})", lodestoneId);
+            await ReplyAsync("Failed to get your Lodestone character!");
             return;
         }
 
@@ -498,6 +508,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         if (classJobs == null)
         {
             _logger.LogError("Failed to get ClassJobs from Lodestone character (id={LodestoneId})", lodestoneId);
+            await ReplyAsync("Failed to get info from your Lodestone character!");
             return;
         }
 
