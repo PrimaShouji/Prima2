@@ -6,8 +6,6 @@ namespace Prima.Application.Interactions;
 [ModuleScope(ModuleScopeAttribute.ModuleScoping.Global)]
 public class MiscCommands : InteractionModuleBase<SocketInteractionContext>
 {
-    private static readonly Random Random = new();
-
     private static readonly List<string> OopsImages = new()
     {
         "https://cdn.discordapp.com/attachments/327524883095617546/1381371836507619338/the_incident.gif?ex=685080c6&is=684f2f46&hm=9229d0f1918b2d587448151edcc5b1186f07c7360dd0fdd98f8db184b931e833&",
@@ -15,5 +13,5 @@ public class MiscCommands : InteractionModuleBase<SocketInteractionContext>
     };
 
     [SlashCommand("oops", "oops")]
-    public Task Oops() => RespondAsync(OopsImages[Random.Next(OopsImages.Count)]);
+    public Task Oops() => RespondAsync(string.Join("\n", OopsImages));
 }
