@@ -1,14 +1,12 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 
 namespace Prima.Application.Commands.Random;
-
-[Name("Extra")]
-public class ExtraCommands : ModuleBase<SocketCommandContext>
+public class ExtraCommands : PrimaInteractionModuleBase
 {
-    [Command("roll", RunMode = RunMode.Async)]
+    [SlashCommand("roll", "Run the roll command.", runMode: RunMode.Async)]
     [Description("T̵̪͖̎̈̍ḛ̷̤͑̚ș̴̔͑̾ͅͅt̸͔͜͝ ̶̡̨̪͌̉͠ỷ̵̺̕o̴̞̍ū̴͚̣̤r̵͚͎͔͘ ̴̨̬̿ḷ̷͖̀̚u̴͖̲͌́c̴̲̣͙͑̈͝k̸͍͖̿̆̓!̶̢̅̀")]
-    public async Task RollAsync([Remainder] string args = "")
+    public async Task RollAsync(string args = "")
     {
         var res = (int)Math.Floor(new System.Random().NextDouble() * 4);
         switch (res)

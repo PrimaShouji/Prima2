@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace Prima.DiscordNet.Services
         /// Returns the number of seconds until the specified command may be used again.
         /// </summary>
         /// <param name="command">The command to check.</param>
-        public long TimeUntilReady(CommandInfo command)
+        public long TimeUntilReady(ICommandInfo command)
         {
             if (!_commandTimeouts.ContainsKey(command.Name))
                 return 0;
@@ -29,7 +29,7 @@ namespace Prima.DiscordNet.Services
         /// Returns true if the command is ready to be used again.
         /// </summary>
         /// <param name="command">The command to check.</param>
-        public bool IsReady(CommandInfo command)
+        public bool IsReady(ICommandInfo command)
         {
             return !_commandTimeouts.ContainsKey(command.Name)
                    || _commandTimeouts[command.Name] < DateTimeOffset.Now.ToUnixTimeSeconds();
@@ -42,7 +42,7 @@ namespace Prima.DiscordNet.Services
         /// </summary>
         /// <param name="command">The command to render unusable.</param>
         /// <param name="seconds">How long to disable the command.</param>
-        public void ResetTime(CommandInfo command, int seconds)
+        public void ResetTime(ICommandInfo command, int seconds)
         {
             if (seconds == 0)
                 throw new InvalidOperationException("Command does not have a rate limit.");

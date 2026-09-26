@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Discord;
-using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using FFXIVWeather.Lumina;
@@ -71,13 +70,10 @@ var host = Host.CreateDefaultBuilder()
             AlwaysDownloadUsers = true,
             LargeThreshold = 250,
             MessageCacheSize = 10000,
-            GatewayIntents = GatewayIntents.All ^ GatewayIntents.GuildPresences ^ GatewayIntents.GuildScheduledEvents ^
-                             GatewayIntents.GuildInvites,
+            GatewayIntents = GatewayIntents.AllUnprivileged,
         };
 
         sc.AddSingleton(_ => new DiscordSocketClient(disConfig));
-        sc.AddSingleton<CommandService>();
-        sc.AddSingleton<CommandHandlingService>();
         sc.AddSingleton<InteractionService>();
         sc.AddSingleton<InteractionHandlingService>();
 
@@ -185,8 +181,6 @@ Task LogDiscord<TService>(LogMessage message)
 var client = host.Services.GetRequiredService<DiscordSocketClient>();
 client.Log += LogDiscord<DiscordSocketClient>;
 
-host.Services.GetRequiredService<CommandService>().Log += LogDiscord<CommandService>;
-
 var db = host.Services.GetRequiredService<IDbService>();
 var web = host.Services.GetRequiredService<WebClient>();
 var templates = host.Services.GetRequiredService<ITemplateProvider>();
@@ -218,7 +212,6 @@ client.UserVoiceStateUpdated += mute.OnVoiceJoin;
 
 client.ButtonExecuted += component => Modmail.Handler(db, component);
 
-client.MessageUpdated += (_, message, _) => AnnounceEdit.Handler(client, db, message);
 client.ReactionAdded += (cachedMessage, _, reaction)
     => AnnounceReact.HandlerAdd(client, db, cachedMessage, reaction);
 
@@ -249,10 +242,6 @@ client.Ready += () =>
 
         logger.LogInformation("Interaction service initialized with {SlashCommandCount} slash command(s)",
             interactionService.SlashCommands.Count);
-
-        // Add text commands
-        var commandHandler = host.Services.GetRequiredService<CommandHandlingService>();
-        await commandHandler.InitializeAsync();
 
         // Set up other services
         var keepClean = host.Services.GetRequiredService<KeepClean>();

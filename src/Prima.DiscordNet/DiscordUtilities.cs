@@ -1,5 +1,5 @@
 ﻿using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using System;
 using System.Collections.Generic;
@@ -29,19 +29,19 @@ namespace Prima.DiscordNet
             return commands
                 .Select(c =>
                 {
-                    var commandAttr = c.GetCustomAttribute<CommandAttribute>();
+                    var commandAttr = c.GetCustomAttribute<SlashCommandAttribute>();
                     var descAttr = c.GetCustomAttribute<DescriptionAttribute>();
-                    return $"`{prefix}{commandAttr?.Text}` - {descAttr?.Description}\n";
+                    return $"`/{commandAttr?.Name}` - {descAttr?.Description}\n";
                 })
                 .Aggregate((text, next) => text + next);
         }
 
-        public static async Task PostImage(HttpClient http, SocketCommandContext context, string uri)
+        public static async Task PostImage(HttpClient http, SocketInteractionContext context, string uri)
         {
-            await context.Channel.SendMessageAsync(uri);
+            await context.Interaction.FollowupAsync(uri);
         }
 
-        public static async Task<IUser> GetUserFromMention(string userMention, ICommandContext context)
+        public static async Task<IUser> GetUserFromMention(string userMention, IInteractionContext context)
         {
             var id = ulong.Parse(string.Join("", userMention.Where(char.IsDigit).ToArray()));
             return await context.Client.GetUserAsync(id);
@@ -62,23 +62,23 @@ namespace Prima.DiscordNet
 
     public static class DiscordUserExtensions
     {
-        public static bool MemberHasRole(this IGuildUser member, ulong roleId, ICommandContext context)
+        public static bool MemberHasRole(this IGuildUser member, ulong roleId, IInteractionContext context)
         {
             return member.RoleIds.FirstOrDefault(rId => rId == roleId) != default;
         }
 
-        public static bool MemberHasRole(this IGuildUser member, IRole role, ICommandContext context)
+        public static bool MemberHasRole(this IGuildUser member, IRole role, IInteractionContext context)
         {
             return member.MemberHasRole(role.Id, context);
         }
 
-        public static bool HasRole(this IUser user, ulong roleId, SocketCommandContext context)
+        public static bool HasRole(this IUser user, ulong roleId, SocketInteractionContext context)
         {
             var member = context.Guild.GetUser(user.Id);
             return member.Roles.FirstOrDefault(r => r.Id == roleId) != null;
         }
 
-        public static bool HasRole(this IUser user, IRole role, SocketCommandContext context)
+        public static bool HasRole(this IUser user, IRole role, SocketInteractionContext context)
         {
             return user.HasRole(role.Id, context);
         }

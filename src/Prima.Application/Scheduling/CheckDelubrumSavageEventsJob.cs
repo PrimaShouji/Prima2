@@ -65,9 +65,9 @@ public class CheckDelubrumSavageEventsJob : CheckEventChannelJob
         await AssignExecutorRole(guild);
         await NotifyHost(
             "You have been given the Delubrum Host role for 5 hours!\n" +
-            "You can now use the command `~setroler @User` to give them access to the progression " +
-            "role commands `~addprogrole @User Role Name` and `~removeprogrole @User Role Name`!\n" +
-            "You can also modify multiple users at once by using `~addprogrole @User1 @User2 Role Name`.\n\n" +
+            "You can now use `/setroler user: @User` to give them access to the progression " +
+            "role commands `/addprogrole args: @User Role Name` and `/removeprogrole args: @User Role Name`!\n" +
+            "You can also modify multiple users at once by providing a space-separated user list to `/addprogrole args:`.\n\n" +
             "Available roles:\n" +
             "▫️ Trinity Seeker Progression\n" +
             "▫️ Queen's Guard Progression\n" +

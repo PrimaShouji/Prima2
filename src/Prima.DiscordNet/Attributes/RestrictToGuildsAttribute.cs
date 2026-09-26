@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 
 namespace Prima.DiscordNet.Attributes
 {
@@ -19,7 +19,7 @@ namespace Prima.DiscordNet.Attributes
             GuildIds = guildIds;
         }
 
-        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo command, IServiceProvider services)
         {
             if (!(context.User is IGuildUser guildUser))
             {

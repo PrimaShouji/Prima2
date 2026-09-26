@@ -29,6 +29,28 @@ namespace Prima.DiscordNet.Services
         public async Task InitializeAsync(Assembly assembly = null)
         {
             _client.InteractionCreated += HandleInteraction;
+            _handler.SlashCommandExecuted += async (_, context, result) =>
+            {
+                if (result.IsSuccess)
+                {
+                    return;
+                }
+
+                if (result.Error == InteractionCommandError.UnmetPrecondition && context.Interaction.HasResponded)
+                {
+                    return;
+                }
+
+                _logger.LogError("Slash command failed: {ErrorReason}", result.ErrorReason);
+                if (!context.Interaction.HasResponded)
+                {
+                    await context.Interaction.RespondAsync("Failed to process interaction.", ephemeral: true);
+                }
+                else
+                {
+                    await context.Interaction.FollowupAsync("Failed to process interaction.", ephemeral: true);
+                }
+            };
             var modules = await _handler.AddModulesAsync(assembly ?? Assembly.GetEntryAssembly(), _services);
             var scopedModules = modules
                 .Select(m => new
@@ -99,15 +121,30 @@ namespace Prima.DiscordNet.Services
                         break;
                 }
 
-                await context.Interaction.RespondAsync("Failed to process interaction.");
+                if (!context.Interaction.HasResponded)
+                {
+                    await context.Interaction.RespondAsync("Failed to process interaction.", ephemeral: true);
+                }
             }
-            catch
+            catch (Exception exception)
             {
-                // If Slash Command execution fails it is most likely that the original interaction acknowledgement will persist. It is a good idea to delete the original
-                // response, or at least let the user know that something went wrong during the command execution.
-                if (interaction.Type is InteractionType.ApplicationCommand)
-                    await interaction.GetOriginalResponseAsync()
-                        .ContinueWith(async msg => await msg.Result.DeleteAsync());
+                _logger.LogError(exception, "Failed to process interaction");
+                if (!interaction.HasResponded)
+                {
+                    await interaction.RespondAsync("Failed to process interaction.", ephemeral: true);
+                }
+                else
+                {
+                    try
+                    {
+                        await interaction.ModifyOriginalResponseAsync(properties =>
+                            properties.Content = "Failed to process interaction.");
+                    }
+                    catch
+                    {
+                        await interaction.FollowupAsync("Failed to process interaction.", ephemeral: true);
+                    }
+                }
             }
         }
     }

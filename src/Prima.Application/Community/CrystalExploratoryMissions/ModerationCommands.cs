@@ -1,7 +1,7 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 using Prima.DiscordNet.Extensions;
 using Prima.DiscordNet.Handlers;
@@ -14,8 +14,7 @@ namespace Prima.Application.Community.CrystalExploratoryMissions;
 /// <summary>
 /// This module includes commands that assist with moderation.
 /// </summary>
-[Name("CEM Moderation")]
-public class ModerationCommands : ModuleBase<SocketCommandContext>
+public class ModerationCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
     private readonly ITemplateProvider _templates;
@@ -26,7 +25,7 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         _templates = templates;
     }
 
-    [Command("setusermodmail")]
+    [SlashCommand("setusermodmail", "Run the setusermodmail command.")]
     public async Task SetUserModmailChannelAsync(ITextChannel channel)
     {
         await channel.SendMessageAsync(
@@ -40,17 +39,19 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Submit a report.
-    [Command("modmail", RunMode = RunMode.Async)]
-    [Alias("report")]
+    [SlashCommand("modmail", "Run the modmail command.", runMode: RunMode.Async)]
     [Description("Privately report information to the server staff.")]
-    public async Task ReportAsync([Remainder] string output = "")
+    public async Task ReportAsync(string output = "", IAttachment? attachment1 = null, IAttachment? attachment2 = null,
+        IAttachment? attachment3 = null, IAttachment? attachment4 = null, IAttachment? attachment5 = null,
+        IAttachment? attachment6 = null, IAttachment? attachment7 = null, IAttachment? attachment8 = null,
+        IAttachment? attachment9 = null, IAttachment? attachment10 = null)
     {
         if (Context.Guild != null)
         {
             _ = WarnOfPublicReport();
         }
 
-        var responseMessage = await Context.Channel.SendMessageAsync(Properties.Resources.ModmailThankYou);
+        await ReplyAsync(Properties.Resources.ModmailThankYou);
 
         var guild = Context.Client.GetGuild(SpecialGuilds.CrystalExploratoryMissions);
 
@@ -74,16 +75,13 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         }
 
         await thread.SendMessageAsync(output);
-        foreach (var attachment in Context.Message.Attachments)
+        foreach (var attachment in new[]
+                 {
+                     attachment1, attachment2, attachment3, attachment4, attachment5,
+                     attachment6, attachment7, attachment8, attachment9, attachment10,
+                 }.Where(attachment => attachment != null))
         {
-            await thread.SendFileAsync(Path.Combine(_db.Config.TempDir, attachment.Filename), string.Empty);
-        }
-
-        if (Context.Guild != null)
-        {
-            await Context.Message.DeleteAsync();
-            await Task.Delay(10000);
-            await responseMessage.DeleteAsync();
+            await thread.SendMessageAsync($"Attachment: {attachment!.Url}");
         }
     }
 
@@ -95,15 +93,11 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Check when a user joined Discord.
-    [Command("when")]
+    [SlashCommand("when", "Run the when command.")]
     [RequireUserPermission(GuildPermission.KickMembers)]
-    public Task WhenAsync([Remainder] string user = "")
+    public Task WhenAsync(IUser user)
     {
-        if (!ulong.TryParse(Util.CleanDiscordMention(user), out var uid))
-        {
-            return ReplyAsync("Could not read user ID.");
-        }
-
+        var uid = user.Id;
         var unixTimestamp = uid / 4194304 + 1420070400000;
         var unixTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         unixTime = unixTime.AddMilliseconds(unixTimestamp);
@@ -112,9 +106,9 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Check when a user created their FFXIV character.
-    [Command("lwhen")]
+    [SlashCommand("lwhen", "Run the lwhen command.")]
     [RequireUserPermission(GuildPermission.KickMembers)]
-    public Task WhenLodestone([Remainder] string lodestoneIdOrUrl = "")
+    public Task WhenLodestone(string lodestoneIdOrUrl = "")
     {
         if (!ulong.TryParse(lodestoneIdOrUrl, out var uid))
         {
@@ -150,10 +144,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         return unixTime;
     }
 
-    [Command("ban")]
+    [SlashCommand("ban", "Run the ban command.")]
     [RequireUserPermission(GuildPermission.BanMembers)]
     [RequireContext(ContextType.Guild)]
-    public async Task BanAsync(string user, [Remainder] string reason)
+    public async Task BanAsync(string user, string reason)
     {
         if (!ulong.TryParse(Util.CleanDiscordMention(user), out var uid))
         {
@@ -177,7 +171,7 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("User banned.");
     }
 
-    [Command("timeout")]
+    [SlashCommand("timeout", "Run the timeout command.")]
     [RequireUserPermission(GuildPermission.KickMembers)]
     public async Task TimeoutAsync(IUser user)
     {
@@ -198,10 +192,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         await member.AddRoleAsync(timeoutRole);
         await member.RemoveRolesAsync(new List<IRole> { memberRole, bozjaRole, eurekaRole, diademRole });
 
-        await ReplyAsync("User timed out. You may end their timeout at any time with `~untimeout`.");
+        await ReplyAsync("User timed out. You may end their timeout at any time with `/untimeout`.");
     }
 
-    [Command("untimeout")]
+    [SlashCommand("untimeout", "Run the untimeout command.")]
     [RequireUserPermission(GuildPermission.KickMembers)]
     public async Task UntimeoutAsync(IUser user)
     {
@@ -224,10 +218,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Add a regex to the denylist.
-    [Command("blocktext", RunMode = RunMode.Async)]
+    [SlashCommand("blocktext", "Run the blocktext command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task BlockTextAsync([Remainder] string regexString)
+    public async Task BlockTextAsync([Summary("regex", "Regular expression to block.")] string regexString)
     {
         await Task.Delay(1000);
 
@@ -246,10 +240,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Remove a regex from the denylist.
-    [Command("unblocktext", RunMode = RunMode.Async)]
+    [SlashCommand("unblocktext", "Run the unblocktext command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task UnblockTextAsync([Remainder] string regexString = "")
+    public async Task UnblockTextAsync([Summary("regex", "Regular expression to remove.")] string regexString = "")
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -284,10 +278,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Add a regex to the greylist.
-    [Command("softblocktext", RunMode = RunMode.Async)]
+    [SlashCommand("softblocktext", "Run the softblocktext command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task SoftBlockTextAsync([Remainder] string regexString)
+    public async Task SoftBlockTextAsync([Summary("regex", "Regular expression to soft block.")] string regexString)
     {
         await Task.Delay(1000);
 
@@ -306,10 +300,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
     }
 
     // Remove a regex from the greylist.
-    [Command("softunblocktext", RunMode = RunMode.Async)]
+    [SlashCommand("softunblocktext", "Run the softunblocktext command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task SoftUnblockTextAsync([Remainder] string regexString = "")
+    public async Task SoftUnblockTextAsync([Summary("regex", "Regular expression to remove.")] string regexString = "")
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -343,11 +337,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync(Properties.Resources.GenericSuccess);
     }
 
-    [Command("blockedtext", RunMode = RunMode.Async)]
-    [Alias("blockedtexts")]
+    [SlashCommand("blockedtext", "Run the blockedtext command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task SeeBlockedTexts([Remainder] string args = "")
+    public async Task SeeBlockedTexts(string args = "")
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -358,11 +351,10 @@ public class ModerationCommands : ModuleBase<SocketCommandContext>
         await Context.User.SendMessageAsync(output);
     }
 
-    [Command("softblockedtext", RunMode = RunMode.Async)]
-    [Alias("softblockedtexts")]
+    [SlashCommand("softblockedtext", "Run the softblockedtext command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task SeeSoftBlockedTexts([Remainder] string args = "")
+    public async Task SeeSoftBlockedTexts(string args = "")
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;

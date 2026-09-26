@@ -127,7 +127,7 @@ namespace Prima.DiscordNet.Services
                     await userDm.SendMessageAsync(
                         "Because of Discord's limitations, nicknames must be 32 characters or fewer in length. " +
                         $"That nickname, `{nickname}`, exceeds 32 characters.\n" +
-                        "If you meant to change your character name, please use `~iam` again in the welcome channel.");
+                        "If you meant to change your character name, please use `/iam` again in the welcome channel.");
                     await newMember.ModifyAsync(properties => { properties.Nickname = GetDefaultNickname(user); });
                     return;
                 }

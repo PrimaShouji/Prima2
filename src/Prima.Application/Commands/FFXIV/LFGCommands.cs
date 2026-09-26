@@ -1,21 +1,20 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 
 namespace Prima.Application.Commands.FFXIV;
-
-[Name("FFXIV LFG")]
-public class LFGCommands : ModuleBase<SocketCommandContext>
+public class LFGCommands : PrimaInteractionModuleBase
 {
-    [Command("whatdoineed")]
+    [SlashCommand("whatdoineed", "Run the whatdoineed command.")]
     [Description("[FFXIV] Tells you how many more people of each role you need.")]
-    public Task WhatDoINeedAsync([Remainder] string args = "")
+    public Task WhatDoINeedAsync(
+        [Summary("args", "Current party composition followed by target composition.")] string args = "")
     {
         var vargs = args.Split(' ');
         if (vargs.Length != 2)
         {
             return ReplyAsync("Wrong argument count!\n" +
-                              "Command syntax: `~whatdoineed <Current Composition> <Target Composition>`\n" +
-                              "Example: `~whatdoineed 4d4h4t 7d7h7t` => `3d3h3t`");
+                              "Enter the current and target party compositions in the args option, separated by a space.\n" +
+                              "Example: set the `args` option to `4d4h4t 7d7h7t` => `3d3h3t`");
         }
 
         var currentComp = vargs[0];

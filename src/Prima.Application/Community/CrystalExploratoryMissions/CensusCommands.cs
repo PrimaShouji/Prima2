@@ -1,5 +1,5 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Discord.Net;
 using Microsoft.Extensions.Logging;
 using Prima.DiscordNet;
@@ -12,9 +12,7 @@ using Prima.Services;
 using Color = Discord.Color;
 
 namespace Prima.Application.Community.CrystalExploratoryMissions;
-
-[Name("CEM Census")]
-public class CensusCommands : ModuleBase<SocketCommandContext>
+public class CensusCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
     private readonly LodestoneClient _lodestone;
@@ -32,10 +30,12 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     private const string MostRecentZoneRole = "Bozja";
 
     // Declare yourself as a character.
-    [Command("iam", RunMode = RunMode.Async)]
-    [Alias("i am")]
+    [SlashCommand("iam", "Run the iam command.", runMode: RunMode.Async)]
     [Description("[FFXIV] Register a character to yourself.")]
-    public async Task IAmAsync(params string[] parameters)
+    public Task IAmAsync([Summary("character", "World and character name, or a Lodestone ID.")] string parameters) =>
+        IAmCoreAsync(parameters.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+    private async Task IAmCoreAsync(string[] parameters)
     {
 #if !DEBUG
         if (Context.Guild != null && Context.Guild.Id == SpecialGuilds.CrystalExploratoryMissions)
@@ -45,7 +45,6 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             const ulong timeOut = 651966972132851712;
             if (Context.Channel.Id != welcome && Context.Channel.Id != botSpam && Context.Channel.Id != timeOut)
             {
-                await Context.Message.DeleteAsync();
                 var reply = await ReplyAsync("That command is disabled in this channel.");
                 await Task.Delay(10000);
                 await reply.DeleteAsync();
@@ -62,8 +61,6 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         _logger.LogInformation("Mutual guild ID: {GuildId}", guild.Id);
 
         var guildConfig = _db.Guilds.Single(g => g.Id == guild.Id);
-        var prefix = guildConfig.Prefix == ' ' ? _db.Config.Prefix : guildConfig.Prefix;
-
         ulong lodestoneId = 0;
         if (parameters.Length != 3)
         {
@@ -73,7 +70,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
                 {
                     _logger.LogInformation("Failed to parse Lodestone ID");
                     var reply = await ReplyAsync(
-                        $"{Context.User.Mention}, please enter that command in the format `{prefix}iam World Name Surname`.");
+                        $"{Context.User.Mention}, use `/iam character: World Name Surname` or provide a Lodestone ID.");
                     await Task.Delay(MessageDeleteDelay);
                     await reply.DeleteAsync();
                     return;
@@ -83,25 +80,12 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             {
                 _logger.LogInformation("Invalid iam command syntax");
                 var reply = await ReplyAsync(
-                    $"{Context.User.Mention}, please enter that command in the format `{prefix}iam World Name Surname`.");
+                    $"{Context.User.Mention}, use `/iam character: World Name Surname` or provide a Lodestone ID.");
                 await Task.Delay(MessageDeleteDelay);
                 await reply.DeleteAsync();
                 return;
             }
         }
-
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(MessageDeleteDelay);
-            try
-            {
-                await Context.Message.DeleteAsync();
-            }
-            catch (Exception e)
-            {
-                _logger.LogWarning(e, "Message was already deleted");
-            }
-        });
 
         var world = "";
         var name = "";
@@ -180,12 +164,12 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             try
             {
                 await Context.User.SendMessageAsync(
-                    "We now require that users verify ownership of their FFXIV accounts when using `~iam`. " +
+                    "We now require that users verify ownership of their FFXIV accounts when using `/iam`. " +
                     "Your Discord ID is:");
                 await Context.User.SendMessageAsync(Context.User.Id
                     .ToString()); // Send this in a separate message to make things easier for mobile users
                 await Context.User.SendMessageAsync(
-                    "Please paste this number somewhere into your Lodestone bio here: <https://na.finalfantasyxiv.com/lodestone/my/setting/profile/> and `~iam` again.");
+                    "Please paste this number somewhere into your Lodestone bio here: <https://na.finalfantasyxiv.com/lodestone/my/setting/profile/> and `/iam` again.");
             }
             catch (HttpException e) when (e.DiscordCode == DiscordErrorCode.CannotSendMessageToUser)
             {
@@ -273,31 +257,32 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         await finalReply.DeleteAsync();
     }
 
-    [Command("theyare2", RunMode = RunMode.Async)]
+    [SlashCommand("theyare2", "Run the theyare2 command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
-    public Task TheyAre2Async(string userMentionStr, params string[] parameters)
+    public Task TheyAre2Async(
+        [Summary("user", "Discord member whose character should be registered.")] IUser userMention,
+        [Summary("character", "World and character name, or a Lodestone ID.")] string parameters)
     {
-        return TheyAreAsync(userMentionStr, parameters);
+        return TheyAreAsync(userMention, parameters);
     }
 
     // Set someone else's character.
-    [Command("theyare", RunMode = RunMode.Async)]
+    [SlashCommand("theyare", "Run the theyare command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.KickMembers)]
-    public async Task TheyAreAsync(string userMentionStr, params string[] parameters)
+    public async Task TheyAreAsync(
+        [Summary("user", "Discord member whose character should be registered.")] IUser userMention,
+        [Summary("character", "World and character name, or a Lodestone ID.")] string parameters)
     {
+        var parametersArray = parameters.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var guildConfig = _db.Guilds.Single(g => g.Id == Context.Guild.Id);
-        var prefix = guildConfig.Prefix == ' ' ? _db.Config.Prefix : guildConfig.Prefix;
-
-        var userMention = await DiscordUtilities.GetUserFromMention(userMentionStr, Context);
-
         ulong lodestoneId = 0;
-        if (parameters.Length < 3)
+        if (parametersArray.Length < 3)
         {
-            if (!ulong.TryParse(parameters[0], out lodestoneId))
+            if (!ulong.TryParse(parametersArray[0], out lodestoneId))
             {
                 _logger.LogInformation("Failed to parse Lodestone ID");
                 var reply = await ReplyAsync(
-                    $"{Context.User.Mention}, please enter that command in the format `{prefix}theyare Mention World Name Surname`.");
+                    $"{Context.User.Mention}, use `/theyare user: @user character: World Name Surname` or provide a Lodestone ID.");
                 await Task.Delay(MessageDeleteDelay);
                 await reply.DeleteAsync();
                 return;
@@ -306,10 +291,10 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
 
         var world = "";
         var name = "";
-        if (parameters.Length >= 3)
+        if (parametersArray.Length >= 3)
         {
-            world = parameters[0].ToLower();
-            name = parameters[1] + " " + parameters[2];
+            world = parametersArray[0].ToLower();
+            name = parametersArray[1] + " " + parametersArray[2];
             world = RegexSearches.NonAlpha.Replace(world, string.Empty);
             name = RegexSearches.AngleBrackets.Replace(name, string.Empty);
             name = RegexSearches.UnicodeApostrophe.Replace(name, string.Empty);
@@ -325,7 +310,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             }
         }
 
-        var force = parameters[^1].ToLower() == "force";
+        var force = parametersArray[^1].ToLower() == "force";
 
         var guild = Context.Guild ?? Context.Client.Guilds
 #if !DEBUG
@@ -343,7 +328,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         LodestoneCharacter? character;
         try
         {
-            if (parameters.Length >= 3)
+            if (parametersArray.Length >= 3)
             {
                 _logger.LogInformation("Searching for user: ({World}) {CharacterName}", world, name);
                 (foundCharacter, character) =
@@ -505,10 +490,11 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         // TODO: Restore level check and content role assignment after adding class/job data to the Lodestone Lambda
     }
 
-    [Command("unlink", RunMode = RunMode.Async)]
+    [SlashCommand("unlink", "Run the unlink command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.KickMembers)]
-    public async Task UnlinkCharacter(params string[] args)
+    public async Task UnlinkCharacter(string arguments)
     {
+        var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (args.Length == 1)
         {
             if (!ulong.TryParse(args[0], out var lodestoneId))
@@ -544,19 +530,19 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("User unlinked.");
     }
 
-    [Command("verifyuser", RunMode = RunMode.Async)]
+    [SlashCommand("verifyuser", "Run the verifyuser command.", runMode: RunMode.Async)]
     [Description("[FFXIV] Verify content completion roles for a user.")]
     [RequireOwner]
-    public async Task VerifyUserAsync(ulong userId)
+    public async Task VerifyUserAsync(IUser user)
     {
-        var user = await Context.Client.GetUserAsync(userId);
         await VerifyCore(user, Array.Empty<string>());
     }
 
-    [Command("verify", RunMode = RunMode.Async)]
+    [SlashCommand("verify", "Run the verify command.", runMode: RunMode.Async)]
     [Description("[FFXIV] Get content completion vanity roles.")]
-    public async Task VerifyAsync(params string[] args)
+    public async Task VerifyAsync(string arguments = "")
     {
+        var args = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         await VerifyCore(Context.User, args);
     }
 
@@ -569,7 +555,6 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             const ulong botSpam = 551586630478331904;
             if (Context.Channel.Id == welcome || Context.Channel.Id != botSpam)
             {
-                await Context.Message.DeleteAsync();
                 var reply = await ReplyAsync("That command is disabled in this channel.");
                 await Task.Delay(10000);
                 await reply.DeleteAsync();
@@ -586,8 +571,6 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         _logger.LogInformation("Mutual guild ID: {GuildId}", guild.Id);
 
         var guildConfig = _db.Guilds.First(g => g.Id == guild.Id);
-        var prefix = guildConfig.Prefix == ' ' ? _db.Config.Prefix : guildConfig.Prefix;
-
         _logger.LogInformation("Fetching user {UserId} from guild {GuildId}", user.Id, guild.Id);
         var member = await Context.Client.Rest.GetGuildUserAsync(guild.Id, user.Id);
         var arsenalMaster = GetConfiguredRole(guildConfig, guild, "Arsenal Master");
@@ -603,7 +586,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
         if (dbUser == null)
         {
             await ReplyAsync(
-                $"Your Lodestone information doesn't seem to be stored. Please register it again with `{prefix}iam`.");
+                "Your Lodestone information doesn't seem to be stored. Please register it again with `/iam`.");
             return;
         }
 
@@ -742,7 +725,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     }
 
     // Check who this user is.
-    [Command("whoami", RunMode = RunMode.Async)]
+    [SlashCommand("whoami", "Run the whoami command.", runMode: RunMode.Async)]
     [Description("[FFXIV] Check the character registered to you.")]
     public async Task WhoAmIAsync()
     {
@@ -751,7 +734,6 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
             const ulong welcome = 573350095903260673;
             if (Context.Channel.Id == welcome)
             {
-                await Context.Message.DeleteAsync();
                 var reply = await ReplyAsync("That command is disabled in this channel.");
                 await Task.Delay(10000);
                 await reply.DeleteAsync();
@@ -785,9 +767,9 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     }
 
     // Check who a user is.
-    [Command("whois", RunMode = RunMode.Async)]
+    [SlashCommand("whois", "Run the whois command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.KickMembers)]
-    public async Task WhoIsAsync([Remainder] string user = "")
+    public async Task WhoIsAsync(string user = "")
     {
         if (!ulong.TryParse(Util.CleanDiscordMention(user), out var uid))
         {
@@ -814,9 +796,9 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     }
 
     // Check who a character is owned by.
-    [Command("lwhois", RunMode = RunMode.Async)]
+    [SlashCommand("lwhois", "Run the lwhois command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.KickMembers)]
-    public async Task LodestoneWhoIsAsync([Remainder] string lodestoneId = "")
+    public async Task LodestoneWhoIsAsync(string lodestoneId = "")
     {
         var found = _db.Users.SingleOrDefault(u => u.LodestoneId == lodestoneId);
         if (found == null)
@@ -838,7 +820,7 @@ public class CensusCommands : ModuleBase<SocketCommandContext>
     }
 
     // Check the number of database entries.
-    [Command("indexcount")]
+    [SlashCommand("indexcount", "Run the indexcount command.")]
     [RequireUserPermission(GuildPermission.KickMembers)]
     public async Task IndexCountAsync()
     {

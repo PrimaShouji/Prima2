@@ -1,12 +1,10 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 using Prima.Services;
 
 namespace Prima.Application.Commands.Core;
-
-[Name("Channel Information")]
-public class ChannelInfoCommands : ModuleBase<SocketCommandContext>
+public class ChannelInfoCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
 
@@ -15,16 +13,16 @@ public class ChannelInfoCommands : ModuleBase<SocketCommandContext>
         _db = db;
     }
     
-    [Command("setdescription")]
+    [SlashCommand("setdescription", "Run the setdescription command.")]
     [RequireUserPermission(GuildPermission.BanMembers)]
-    public async Task SetDescriptionAsync([Remainder] string description)
+    public async Task SetDescriptionAsync(string description)
     {
         await _db.DeleteChannelDescription(Context.Channel.Id);
         await _db.AddChannelDescription(Context.Channel.Id, description);
         await ReplyAsync($"{Context.User.Mention}, the help message has been updated!");
     }
 
-    [Command("whatisthis")]
+    [SlashCommand("whatisthis", "Run the whatisthis command.")]
     [Description("Explains what the channel you use it in is for, if such information is available.")]
     public Task WhatIsThisAsync()
     {

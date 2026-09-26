@@ -1,12 +1,10 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Prima.Services;
 
 namespace Prima.Application.Commands.Core;
-
-[Name("Admin 2")]
 [RequireOwner]
-public class AdminCommands2 : ModuleBase<SocketCommandContext>
+public class AdminCommands2 : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
 
@@ -15,14 +13,14 @@ public class AdminCommands2 : ModuleBase<SocketCommandContext>
         _db = db;
     }
 
-    [Command("sendmessage")]
-    public async Task SudoMessage(ITextChannel channel, [Remainder] string message)
+    [SlashCommand("sendmessage", "Run the sendmessage command.")]
+    public async Task SudoMessage(ITextChannel channel, string message)
     {
         await channel.SendMessageAsync(message);
         await ReplyAsync("Sent!");
     }
 
-    [Command("clearbrokenusers")]
+    [SlashCommand("clearbrokenusers", "Run the clearbrokenusers command.")]
     public async Task ClearBrokenUsers()
     {
         await _db.RemoveBrokenUsers();

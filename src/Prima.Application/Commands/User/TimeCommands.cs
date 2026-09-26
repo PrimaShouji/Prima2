@@ -1,11 +1,9 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 using Prima.Services;
 
 namespace Prima.Application.Commands.User;
-
-[Name("User Time")]
-public class TimeCommands : ModuleBase<SocketCommandContext>
+public class TimeCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
 
@@ -14,9 +12,9 @@ public class TimeCommands : ModuleBase<SocketCommandContext>
         _db = db;
     }
 
-    [Command("settimezone")]
+    [SlashCommand("settimezone", "Run the settimezone command.")]
     [Description("Sets your own timezone for localized DMs and personal messages.")]
-    public async Task SetTimezone([Remainder] string timezone)
+    public async Task SetTimezone(string timezone)
     {
         if (Context.Channel.Name == "welcome") // This should really be a precondition...
         {
@@ -29,7 +27,7 @@ public class TimeCommands : ModuleBase<SocketCommandContext>
         var dbUser = _db.Users.FirstOrDefault(u => u.DiscordId == Context.User.Id);
         if (dbUser == null)
         {
-            await ReplyAsync("Your database information seems to be missing. Please use `~iam World FirstName LastName` again to regenerate it.");
+            await ReplyAsync("Your database information seems to be missing. Please use `/iam character: World FirstName LastName` again to regenerate it.");
             return;
         }
 

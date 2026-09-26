@@ -1,12 +1,10 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet;
 using Prima.DiscordNet.Attributes;
 using Prima.Resources;
 
 namespace Prima.Application.Commands.PSO2;
-
-[Name("PSO2 Guides")]
-public class GuideCommands : ModuleBase<SocketCommandContext>
+public class GuideCommands : PrimaInteractionModuleBase
 {
     private readonly HttpClient _http;
 
@@ -15,7 +13,7 @@ public class GuideCommands : ModuleBase<SocketCommandContext>
         _http = http;
     }
 
-    [Command("aeriomats")]
+    [SlashCommand("aeriomats", "Run the aeriomats command.")]
     [Description("Shows the Aerio materials route.")]
     [RestrictFromGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task AerioMaterials()

@@ -1,26 +1,24 @@
-﻿using System.Diagnostics;
-using Discord.Commands;
+using System.Diagnostics;
+using Discord.Interactions;
 
 namespace Prima.Application.Commands.Core;
-
-[Name("Diagnostics")]
 [RequireOwner]
-public class DiagnosticsCommands : ModuleBase<SocketCommandContext>
+public class DiagnosticsCommands : PrimaInteractionModuleBase
 {
-    private readonly CommandService _commands;
+    private readonly InteractionService _commands;
 
-    public DiagnosticsCommands(CommandService commands)
+    public DiagnosticsCommands(InteractionService commands)
     {
         _commands = commands;
     }
 
-    [Command("ping", RunMode = RunMode.Async)]
+    [SlashCommand("ping", "Run the ping command.", runMode: RunMode.Async)]
     public async Task PingAsync()
     {
         await ReplyAsync($"`{Process.GetCurrentProcess().ProcessName} online, heartbeat {Context.Client.Latency}ms`");
     }
 
-    [Command("modules")]
+    [SlashCommand("modules", "Run the modules command.")]
     public Task Modules()
     {
         return ReplyAsync(_commands.Modules

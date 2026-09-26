@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
+using Discord;
 using Microsoft.Extensions.DependencyInjection;
 using Prima.Services;
 using System;
@@ -9,7 +10,7 @@ namespace Prima.DiscordNet.Attributes
 {
     public class RequireUserInDatabaseAttribute : PreconditionAttribute
     {
-        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo command, IServiceProvider services)
         {
             var db = services.GetRequiredService<IDbService>();
             try

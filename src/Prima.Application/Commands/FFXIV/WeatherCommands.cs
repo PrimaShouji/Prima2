@@ -1,6 +1,6 @@
-﻿using System.Text;
+using System.Text;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using FFXIVWeather.Lumina;
 using Lumina.Excel.GeneratedSheets;
 using Prima.DiscordNet.Attributes;
@@ -10,9 +10,7 @@ using TimeZoneNames;
 using Color = Discord.Color;
 
 namespace Prima.Application.Commands.FFXIV;
-
-[Name("FFXIV Weather")]
-public class WeatherCommands : ModuleBase<SocketCommandContext>
+public class WeatherCommands : PrimaInteractionModuleBase
 {
     private const ulong CEMSpeculation = 738899820168740984;
     private const ulong CEMBozTheorycrafting = 593815337980526603;
@@ -26,11 +24,11 @@ public class WeatherCommands : ModuleBase<SocketCommandContext>
         _weather = weather;
     }
 
-    [Command("weather")]
+    [SlashCommand("weather", "Run the weather command.")]
     [Description("[FFXIV] Shows the current weather for the specified zone.")]
     [DisableInChannelsForGuild(CEMSpeculation, CEMBozTheorycrafting,
         GuildId = SpecialGuilds.CrystalExploratoryMissions)]
-    public async Task WeatherAsync([Remainder] string zone)
+    public async Task WeatherAsync(string zone)
     {
         IList<(Weather, DateTime)> forecast;
         try
@@ -75,11 +73,11 @@ public class WeatherCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync(embed: embed);
     }
 
-    [Command("weatherreport")]
+    [SlashCommand("weatherreport", "Run the weatherreport command.")]
     [Description("[FFXIV] Provides a text file with the next 200 weather entries for the specified zone.")]
     [DisableInChannelsForGuild(CEMSpeculation, CEMBozTheorycrafting,
         GuildId = SpecialGuilds.CrystalExploratoryMissions)]
-    public async Task WeatherReportAsync([Remainder] string zone)
+    public async Task WeatherReportAsync(string zone)
     {
         IList<(Weather, DateTime)> forecast;
         try
@@ -111,7 +109,6 @@ public class WeatherCommands : ModuleBase<SocketCommandContext>
 
         await using var file = new MemoryStream(Encoding.UTF8.GetBytes(outputData));
 
-        await Context.Channel.SendFileAsync(file, "weather.txt",
-            messageReference: new MessageReference(Context.Message.Id));
+        await Context.Interaction.FollowupWithFileAsync(file, "weather.txt");
     }
 }

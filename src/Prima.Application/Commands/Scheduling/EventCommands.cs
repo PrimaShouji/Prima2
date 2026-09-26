@@ -1,6 +1,6 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 using Prima.DiscordNet.Services;
 using Prima.Resources;
@@ -8,9 +8,8 @@ using Prima.Services;
 using Serilog;
 
 namespace Prima.Application.Commands.Scheduling;
-
-[Name("Events")]
-public class EventCommands : ModuleBase<SocketCommandContext>
+[Prima.DiscordNet.Attributes.ModuleScope(Prima.DiscordNet.Attributes.ModuleScopeAttribute.ModuleScoping.Guild, GuildId = Prima.Resources.SpecialGuilds.CrystalExploratoryMissions)]
+public class EventCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
     private readonly MuteService _mutes;
@@ -27,7 +26,7 @@ public class EventCommands : ModuleBase<SocketCommandContext>
     private static readonly Regex MessageRef =
         new(@"discord(?:app)?\.com\/channels\/\d+\/\d+\/(?<MessageID>\d+)", RegexOptions.Compiled);
 
-    [Command("pin", RunMode = RunMode.Async)]
+    [SlashCommand("pin", "Run the pin command.", runMode: RunMode.Async)]
     [Description("Temporarily pins a message in a run channel.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     [CEMRequireRoleOrMentorPlus(RunHostData.PinnerRoleId)]
@@ -41,11 +40,6 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         }
 
         ulong messageId;
-        if (Context.Message.ReferencedMessage != null)
-        {
-            messageId = Context.Message.ReferencedMessage.Id;
-        }
-        else
         {
             var match = MessageRef.Match(messageRef);
             var result = match.Success
@@ -78,7 +72,7 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync($"Message pinned for {EphemeralPinManager.HoursUntilRemoval} hours.");
     }
 
-    [Command("unpin", RunMode = RunMode.Async)]
+    [SlashCommand("unpin", "Run the unpin command.", runMode: RunMode.Async)]
     [Description("Unpins a message pinned by a run member in a run channel.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     [CEMRequireRoleOrMentorPlus(RunHostData.PinnerRoleId)]
@@ -92,11 +86,6 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         }
 
         ulong messageId;
-        if (Context.Message.ReferencedMessage != null)
-        {
-            messageId = Context.Message.ReferencedMessage.Id;
-        }
-        else
         {
             var match = MessageRef.Match(messageRef);
             if (match.Success)
@@ -126,7 +115,7 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         var pinInfo = await _db.EphemeralPins.FirstOrDefaultAsync(e => e.MessageId == messageId);
         if (pinInfo?.PinnerRoleId != RunHostData.PinnerRoleId)
         {
-            await ReplyAsync("That message wasn't pinned with `~pin`!");
+            await ReplyAsync("That message wasn't pinned with `/pin`!");
             return;
         }
 
@@ -135,7 +124,7 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Message unpinned.");
     }
 
-    [Command("setpriority")]
+    [SlashCommand("setpriority", "Run the setpriority command.")]
     [Description("A command for hosts to use that sets a priority speaker for 3 hours.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public async Task SetPrioritySpeaker(IUser other)
@@ -153,7 +142,7 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Priority speaker permissions set!");
     }
 
-    [Command("removepriority")]
+    [SlashCommand("removepriority", "Run the removepriority command.")]
     [Description("A command for hosts to use that removes the priority speaker role from someone.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public async Task RemovePrioritySpeaker(IUser other)
@@ -171,7 +160,7 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Priority speaker permissions removed!");
     }
 
-    [Command("mute")]
+    [SlashCommand("mute", "Run the mute command.")]
     [Description("A command for hosts to use that VC-mutes a user until unmuted, or for 3 hours.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public async Task MuteUser(IUser other)
@@ -200,10 +189,10 @@ public class EventCommands : ModuleBase<SocketCommandContext>
         });
 
         await ReplyAsync(
-            "User muted for 3 hours. You can unmute them at any point before then with `~unmute @user`.");
+            "User muted for 3 hours. You can unmute them at any point before then with `/unmute @user`.");
     }
 
-    [Command("unmute")]
+    [SlashCommand("unmute", "Run the unmute command.")]
     [Description("A command for hosts to use that unmutes a user that they have previously muted.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public async Task UnmuteUser(IUser other)

@@ -42,8 +42,6 @@ public class AuditDeletion
             };
         }
 
-        var prefix = config.Prefix == ' ' ? db.Config.Prefix : config.Prefix;
-
         // Get executor of the deletion.
         await Task.Delay(5000); // Wait a bit to increase the chance that Discord will emit a log in time
         var auditLogs = await guild.GetAuditLogsAsync(10).FlattenAsync();
@@ -68,7 +66,7 @@ public class AuditDeletion
             .Build();
 
         // Send the embed.
-        if (author.Id == client.CurrentUser.Id || cachedMessage.Content.StartsWith(prefix))
+        if (author.Id == client.CurrentUser.Id)
         {
             if (guild.GetChannel(config.DeletedCommandChannel) is SocketTextChannel deletedCommandChannel)
             {

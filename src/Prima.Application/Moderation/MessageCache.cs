@@ -9,6 +9,8 @@ public static class MessageCache
     // Caches the last week's worth of messages manually, since the built-in cache doesn't work for older messages.
     public static async Task Handler(IDbService db, IMessage message)
     {
+        if (string.IsNullOrEmpty(message.Content)) return;
+
         var cmessage = new CachedMessage
         {
             AuthorId = message.Author.Id,

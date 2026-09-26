@@ -1,5 +1,5 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Discord.Net;
 using Microsoft.Extensions.Logging;
 using Prima.DiscordNet;
@@ -11,9 +11,8 @@ using Prima.Resources;
 using Prima.Services;
 
 namespace Prima.Application.Commands.FFXIV.DelubrumReginae;
-
-[Name("Delubrum Reginae Runs")]
-public class DRRunCommands : ModuleBase<SocketCommandContext>
+[Prima.DiscordNet.Attributes.ModuleScope(Prima.DiscordNet.Attributes.ModuleScopeAttribute.ModuleScoping.Guild, GuildId = Prima.Resources.SpecialGuilds.CrystalExploratoryMissions)]
+public class DRRunCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
     private readonly ILogParserService _logParser;
@@ -26,7 +25,7 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
         _logger = logger;
     }
 
-    [Command("setroler", RunMode = RunMode.Async)]
+    [SlashCommand("setroler", "Run the setroler command.", runMode: RunMode.Async)]
     [Description("(Hosts only) Gives the Delubrum Roler and Run Pinner roles to the specified user.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     [CEMRequireRoleOrMentorPlus(RunHostData.RoleId)]
@@ -46,9 +45,9 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
         {
             await member.SendMessageAsync(
                 "You have been given the Delubrum Roler role for 4 1/2 hours!\n" +
-                "You can now use the commands `~addprogrole @User Role Name` and `~removeprogrole @User Role Name` to change " +
+                "You can now use `/addprogrole args: @User Role Name` and `/removeprogrole args: @User Role Name` to change " +
                 "the progression roles of run members!\n" +
-                "You can also modify multiple users at once by using `~addprogrole @User1 @User2 Role Name`.\n\n" +
+                "You can also modify multiple users at once by using `/addprogrole args: @User1 @User2 Role Name`.\n\n" +
                 "Available roles:\n" +
                 "▫️ Trinity Seeker Progression\n" +
                 "▫️ Queen's Guard Progression\n" +
@@ -61,7 +60,7 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("rprgdrs", RunMode = RunMode.Async)]
+    [SlashCommand("rprgdrs", "Run the rprgdrs command.", runMode: RunMode.Async)]
     [RequireOwner]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public async Task RPrgDrs()
@@ -84,12 +83,11 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Done!");
     }
 
-    [Command("addprogrole", RunMode = RunMode.Async)]
-    [Alias("addprogroles")]
+    [SlashCommand("addprogrole", "Run the addprogrole command.", runMode: RunMode.Async)]
     [Description(
         "Adds progression roles to server members from a _logger. Rolers can also manually add roles using this command.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
-    public async Task AddDelubrumProgRoleAsync([Remainder] string args)
+    public async Task AddDelubrumProgRoleAsync([Summary("args", "User mentions and role name, or an FFLogs URL.")] string args)
     {
         using var typing = Context.Channel.EnterTypingState();
 
@@ -168,11 +166,11 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Roles added!");
     }
 
-    [Command("removeprogrole", RunMode = RunMode.Async)]
+    [SlashCommand("removeprogrole", "Run the removeprogrole command.", runMode: RunMode.Async)]
     [Description("(Rolers only) Removes a progression role from a user.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     [CEMRequireRoleOrMentorPlus(DelubrumProgressionRoles.Executor)]
-    public async Task RemoveDelubrumProgRoleAsync([Remainder] string args)
+    public async Task RemoveDelubrumProgRoleAsync([Summary("args", "User mentions followed by the role name.")] string args)
     {
         var words = args.Split(' ');
 
@@ -273,7 +271,7 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
 
                 if (missedUsers.Any())
                     await ReplyAsync(
-                        $"Missed users: ```{missedUsers.Select(a => $"({a.Server}) {a.Name}").Distinct().Aggregate("", (agg, next) => agg + $"{next}\n") + "```"}\nThey may need to re-register with `~iam`.");
+                        $"Missed users: ```{missedUsers.Select(a => $"({a.Server}) {a.Name}").Distinct().Aggregate("", (agg, next) => agg + $"{next}\n") + "```"}\nThey may need to re-register with `/iam`.");
                 return;
             }
             default:
@@ -318,7 +316,7 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("progcounts", RunMode = RunMode.Async)]
+    [SlashCommand("progcounts", "Run the progcounts command.", runMode: RunMode.Async)]
     [Description("Get the progression counts of all guild members for Delubrum Reginae (Savage).")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task GetProgressionCounts()
@@ -359,7 +357,7 @@ public class DRRunCommands : ModuleBase<SocketCommandContext>
             clearedMembers.Count()));
     }
 
-    [Command("lfgcountsdrs", RunMode = RunMode.Async)]
+    [SlashCommand("lfgcountsdrs", "Run the lfgcountsdrs command.", runMode: RunMode.Async)]
     [Description("Get the LFG role counts of all guild members for Delubrum Reginae (Savage).")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task GetLFGProgressionCounts()

@@ -1,18 +1,16 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Microsoft.Extensions.Logging;
 using Prima.DiscordNet;
 using Prima.Resources;
 using Color = Discord.Color;
 
 namespace Prima.Application.Commands.Core;
-
-[Name("Admin")]
 [RequireContext(ContextType.Guild)]
 [RequireUserPermission(ChannelPermission.ManageRoles)]
-public class AdminCommands : ModuleBase<SocketCommandContext>
+public class AdminCommands : PrimaInteractionModuleBase
 {
     private readonly ILogger<AdminCommands> _logger;
 
@@ -21,12 +19,15 @@ public class AdminCommands : ModuleBase<SocketCommandContext>
         _logger = logger;
     }
 
-    [Command("changehost")]
-    public async Task ChangeAnnouncementHost(ulong scheduleChannelId, ulong messageId, ulong newHostId)
+    [SlashCommand("changehost", "Run the changehost command.")]
+    public async Task ChangeAnnouncementHost(ITextChannel channel, string messageId, IUser newHost)
     {
-        var guild = Context.Client.GetGuild(SpecialGuilds.CrystalExploratoryMissions);
-        var channel = guild.GetTextChannel(scheduleChannelId);
-        var embedMessage = await channel.GetMessageAsync(messageId) as IUserMessage;
+        if (!ulong.TryParse(messageId, out var messageIdValue))
+        {
+            await ReplyAsync("Message ID must contain only digits.");
+            return;
+        }
+        var embedMessage = await channel.GetMessageAsync(messageIdValue) as IUserMessage;
         var embed = embedMessage?.Embeds.FirstOrDefault();
 
         if (embedMessage == null)
@@ -38,13 +39,6 @@ public class AdminCommands : ModuleBase<SocketCommandContext>
         if (embed == null)
         {
             await ReplyAsync("Embed message not found.");
-            return;
-        }
-
-        var newHost = Context.Guild.GetUser(newHostId);
-        if (newHost == null)
-        {
-            await ReplyAsync("New host not found.");
             return;
         }
 
@@ -60,8 +54,8 @@ public class AdminCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Announcement host changed.");
     }
 
-    [Command("createrole")]
-    public async Task CreateRole([Remainder] string name)
+    [SlashCommand("createrole", "Run the createrole command.")]
+    public async Task CreateRole(string name)
     {
         var nameLower = name.ToLowerInvariant();
         var existing = Context.Guild.Roles
@@ -81,8 +75,8 @@ public class AdminCommands : ModuleBase<SocketCommandContext>
                          "```");
     }
 
-    [Command("setrolecolor")]
-    public async Task SetRoleColor(ulong roleId, string hexCode)
+    [SlashCommand("setrolecolor", "Run the setrolecolor command.")]
+    public async Task SetRoleColor(IRole role, string hexCode)
     {
         var regex = new Regex(@"[0-9a-fA-F]{6}");
         var justHex = regex.Match(hexCode).Value;
@@ -90,7 +84,6 @@ public class AdminCommands : ModuleBase<SocketCommandContext>
         var green = byte.Parse(justHex[2..4], NumberStyles.HexNumber);
         var blue = byte.Parse(justHex[4..], NumberStyles.HexNumber);
 
-        var role = Context.Guild.GetRole(roleId);
         await role.ModifyAsync(props =>
         {
             props.Color = new Color(red, green, blue);
@@ -99,7 +92,7 @@ public class AdminCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Role color updated!");
     }
 
-    [Command("checkcache")]
+    [SlashCommand("checkcache", "Run the checkcache command.")]
     public async Task FindGuildUser(string name)
     {
         var sender = Context.Guild.GetUser(Context.User.Id);

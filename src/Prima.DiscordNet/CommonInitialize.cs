@@ -1,7 +1,8 @@
 ﻿using Discord;
-using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Prima.DiscordNet.Services;
 using Prima.Services;
 using Serilog.Events;
@@ -17,15 +18,25 @@ namespace Prima.DiscordNet
         {
             StaticLog.Initialize();
 
-            var disConfig = new DiscordSocketConfig
+            var disConfig = CreateDiscordSocketConfig();
+
+            return ConfigurePartialServiceCollection(disConfig);
+        }
+
+        public static DiscordSocketConfig CreateDiscordSocketConfig(
+            GatewayIntents additionalExcludedIntents = GatewayIntents.None)
+        {
+            return new DiscordSocketConfig
             {
                 AlwaysDownloadUsers = true,
                 LargeThreshold = 250,
                 MessageCacheSize = 10000,
-                GatewayIntents = GatewayIntents.All ^ GatewayIntents.GuildInvites ^ GatewayIntents.GuildScheduledEvents,
+                GatewayIntents = (GatewayIntents.All
+                                  ^ GatewayIntents.GuildInvites
+                                  ^ GatewayIntents.GuildScheduledEvents
+                                  ^ GatewayIntents.MessageContent)
+                                 & ~additionalExcludedIntents,
             };
-
-            return ConfigurePartialServiceCollection(disConfig);
         }
 
         public static async Task ConfigureServicesAsync(ServiceProvider services)
@@ -39,20 +50,21 @@ namespace Prima.DiscordNet
             var client = services.GetRequiredService<DiscordSocketClient>();
 
             client.Log += LogAsync;
-            services.GetRequiredService<CommandService>().Log += LogAsync;
+            services.GetRequiredService<InteractionService>().Log += LogAsync;
 
             await client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("PRIMA_BOT_TOKEN"));
             await client.StartAsync();
 
-            await services.GetRequiredService<CommandHandlingService>().InitializeAsync();
+            await services.GetRequiredService<InteractionHandlingService>().InitializeAsync();
         }
 
         private static IServiceCollection ConfigurePartialServiceCollection(DiscordSocketConfig disConfig)
         {
             return new ServiceCollection()
+                .AddLogging()
                 .AddSingleton(new DiscordSocketClient(disConfig))
-                .AddSingleton<CommandService>()
-                .AddSingleton<CommandHandlingService>()
+                .AddSingleton<InteractionService>()
+                .AddSingleton<InteractionHandlingService>()
                 .AddSingleton<HttpClient>()
                 .AddSingleton<IDbService, DbService>()
                 .AddSingleton<RateLimitService>()

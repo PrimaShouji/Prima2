@@ -1,5 +1,5 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Prima.Application.Commands.FFXIV.DelubrumReginae;
 using Prima.DiscordNet;
 using Prima.DiscordNet.Attributes;
@@ -7,9 +7,8 @@ using Prima.Resources;
 using Prima.Services;
 
 namespace Prima.Application.Commands.FFXIV.Bozja;
-
-[Name("Bozja Info")]
-public class BozjaInfoCommands : ModuleBase<SocketCommandContext>
+[Prima.DiscordNet.Attributes.ModuleScope(Prima.DiscordNet.Attributes.ModuleScopeAttribute.ModuleScoping.Guild, GuildId = Prima.Resources.SpecialGuilds.CrystalExploratoryMissions)]
+public class BozjaInfoCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
     private readonly HttpClient _http;
@@ -20,7 +19,7 @@ public class BozjaInfoCommands : ModuleBase<SocketCommandContext>
         _http = http;
     }
 
-    [Command("bozhelp", RunMode = RunMode.Async)]
+    [SlashCommand("bozhelp", "Run the bozhelp command.", runMode: RunMode.Async)]
     [Description("Shows help information for the extra Bozja commands.")]
     [RateLimit(TimeSeconds = 10, Global = true)]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
@@ -47,40 +46,39 @@ public class BozjaInfoCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync(embed: embed);
     }
 
-    [Command("lostactions", RunMode = RunMode.Async)]
+    [SlashCommand("lostactions", "Run the lostactions command.", runMode: RunMode.Async)]
     [Description("Shows the Lost Action guide images.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task LostActionsAsync()
     {
         return ReplyAsync(embed: new EmbedBuilder()
             .WithTitle("Lost Actions commands")
-            .WithDescription("~bozjakit - General use Bozja/Zadnor loadout guide\n" +
-                             "~drnspeedrun - Delubrum Reginae (Normal) loadout guide\n" +
-                             "~drskit - Delubrum Reginae (Savage) loadout guide")
+            .WithDescription("/bozjakit - General use Bozja/Zadnor loadout guide\n" +
+                             "/drnspeedrun - Delubrum Reginae (Normal) loadout guide\n" +
+                             "/drskit - Delubrum Reginae (Savage) loadout guide")
             .WithColor(Discord.Color.DarkOrange)
             .Build());
     }
 
-    [Command("bozjakit", RunMode = RunMode.Async)]
+    [SlashCommand("bozjakit", "Run the bozjakit command.", runMode: RunMode.Async)]
     [Description("Shows the Bozja/Zadnor Lost Actions loadout guide.")]
     [RateLimit(TimeSeconds = 10, Global = true)]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task BozjaKitAsync() => DiscordUtilities.PostImage(_http, Context, "https://cdn.discordapp.com/attachments/550777867173232661/1058439977748402276/image.png");
 
-    [Command("star", RunMode = RunMode.Async)]
+    [SlashCommand("star", "Run the star command.", runMode: RunMode.Async)]
     [Description("Shows the Bozjan Southern Front star mob guide.")]
     [RateLimit(TimeSeconds = 10, Global = true)]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task StarMobsAsync() => DiscordUtilities.PostImage(_http, Context, "https://i.imgur.com/muvBR1Z.png");
 
-    [Command("cluster", RunMode = RunMode.Async)]
-    [Alias("clusters")]
+    [SlashCommand("cluster", "Run the cluster command.", runMode: RunMode.Async)]
     [Description("Shows the Bozjan Southern Front cluster path guide.")]
     [RateLimit(TimeSeconds = 10, Global = true)]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task BozjaClustersAsync() => DiscordUtilities.PostImage(_http, Context, "https://i.imgur.com/FuG4wDK.png");
 
-    [Command("memories", RunMode = RunMode.Async)]
+    [SlashCommand("memories", "Run the memories command.", runMode: RunMode.Async)]
     [Description("Shows the Bozjan Southern Front memory path guide.")]
     [RateLimit(TimeSeconds = 10, Global = true)]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]

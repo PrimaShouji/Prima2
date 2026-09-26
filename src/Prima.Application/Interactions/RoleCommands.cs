@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
 using Prima.DiscordNet;
@@ -47,7 +47,7 @@ public class RoleCommands : InteractionModuleBase<SocketInteractionContext>
         var dbUser = await _db.GetUserByDiscordId(user.Id);
         if (dbUser == null)
         {
-            await RespondAsync("You are not currently registered. Please register yourself with `~iam`.",
+            await RespondAsync("You are not currently registered. Please register yourself with `/iam`.",
                 ephemeral: true);
             return;
         }
@@ -94,7 +94,7 @@ public class RoleCommands : InteractionModuleBase<SocketInteractionContext>
         var dbUser = await _db.GetUserByDiscordId(user.Id);
         if (dbUser == null)
         {
-            await RespondAsync("You are not currently registered. Please register yourself with `~iam`.",
+            await RespondAsync("You are not currently registered. Please register yourself with `/iam`.",
                 ephemeral: true);
             return;
         }
@@ -128,7 +128,7 @@ public class RoleCommands : InteractionModuleBase<SocketInteractionContext>
         var dbUser = await _db.GetUserByDiscordId(user.Id);
         if (dbUser == null)
         {
-            await RespondAsync("You are not currently registered. Please register yourself with `~iam`.",
+            await RespondAsync("You are not currently registered. Please register yourself with `/iam`.",
                 ephemeral: true);
             return;
         }

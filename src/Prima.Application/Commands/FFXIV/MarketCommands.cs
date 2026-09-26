@@ -1,12 +1,10 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Newtonsoft.Json.Linq;
 using Prima.DiscordNet.Attributes;
 using Prima.Game.FFXIV.XIVAPI;
 
 namespace Prima.Application.Commands.FFXIV;
-
-[Name("FFXIV Market")]
-public class MarketCommands : ModuleBase<SocketCommandContext>
+public class MarketCommands : PrimaInteractionModuleBase
 {
     private readonly HttpClient _http;
     private readonly XIVAPIClient _xivapi;
@@ -17,19 +15,12 @@ public class MarketCommands : ModuleBase<SocketCommandContext>
         _xivapi = xivapi;
     }
 
-    [Command("market", RunMode = RunMode.Async)]
-    [Description("[FFXIV] Look up market data for an item. Usage: `~market <item name> <world>`")]
-    public async Task MarketAsync(params string[] args)
+    [SlashCommand("market", "Run the market command.", runMode: RunMode.Async)]
+    [Description("[FFXIV] Look up market data for an item and world.")]
+    public async Task MarketAsync(
+        [Summary("item", "Name of the FFXIV item to search for.")] string itemName,
+        [Summary("world", "World or data center to query.")] string worldName)
     {
-        if (args.Length < 2)
-        {
-            await ReplyAsync(
-                $"{Context.User.Mention}, please provide an item name in your command, followed by the World or DC name to query.");
-            return;
-        }
-
-        var itemName = string.Join(' ', args[0..^2]);
-        var worldName = args[^1];
         worldName = char.ToUpper(worldName[0]) + worldName[1..];
 
         var searchResults = await _xivapi.SearchItem(itemName);

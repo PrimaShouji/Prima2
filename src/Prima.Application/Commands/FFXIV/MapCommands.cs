@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Lumina;
 using Lumina.Excel.GeneratedSheets;
 using Newtonsoft.Json.Linq;
@@ -8,9 +8,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
 namespace Prima.Application.Commands.FFXIV;
-
-[Name("FFXIV Maps")]
-public class MapCommands : ModuleBase<SocketCommandContext>
+public class MapCommands : PrimaInteractionModuleBase
 {
     private readonly HttpClient _http;
     private readonly GameData _lumina;
@@ -21,9 +19,9 @@ public class MapCommands : ModuleBase<SocketCommandContext>
         _lumina = lumina;
     }
     
-    [Command("ffxivmap")]
+    [SlashCommand("ffxivmap", "Run the ffxivmap command.")]
     [Description("[FFXIV] Displays a map of the specified zone.")]
-    public async Task MapAsync([Remainder] string zone = "")
+    public async Task MapAsync(string zone = "")
     {
         var (mapFile, _) = await GetMapAndSizeFactor(zone);
         if (mapFile == null)
@@ -39,17 +37,10 @@ public class MapCommands : ModuleBase<SocketCommandContext>
         await Context.Channel.SendFileAsync(mapToSend, $"{zone}.jpg");
     }
 
-    [Command("flag", RunMode = RunMode.Async)]
-    [Description("[FFXIV] Show the specified map with a flag at the specified coordinates. Usage: `~flag 27 13.4 eureka pyros`")]
-    public async Task FlagAsync(params string[] args)
+    [SlashCommand("flag", "Run the flag command.", runMode: RunMode.Async)]
+    [Description("[FFXIV] Show a map with a flag at the specified coordinates.")]
+    public async Task FlagAsync(double x, double y, string zone)
     {
-        if (args.Length < 3 || !float.TryParse(args[0], out var x) || !float.TryParse(args[1], out var y))
-        {
-            await ReplyAsync("Invalid coordinates! Usage: `~flag <x> <y> <zone name>`");
-            return;
-        }
-
-        var zone = string.Join(' ', args[2..]);
         var (mapFile, sizeFactor) = await GetMapAndSizeFactor(zone);
         if (mapFile == null)
         {

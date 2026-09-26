@@ -41,6 +41,17 @@ namespace Prima.DiscordNet.Handlers
 
             var guild = channel.Guild;
 
+            // Message content is unavailable when the privileged intent is not requested. Keep
+            // attachment handling, but do not treat the missing content as text or delete the message.
+            if (string.IsNullOrEmpty(rawMessage.Content))
+            {
+                if (rawMessage.Channel is IMessageChannel messageChannel)
+                {
+                    await ProcessAttachments(db, rawMessage, messageChannel);
+                }
+                return;
+            }
+
             // Keep the welcome channel clean.
             if (rawMessage.Channel.Id == guildConfig.WelcomeChannel)
             {
@@ -72,7 +83,7 @@ namespace Prima.DiscordNet.Handlers
                 }
             }
 
-            if (!rawMessage.Content.StartsWith("~report") && channel is IMessageChannel messageChanel)
+            if (channel is IMessageChannel messageChanel)
             {
                 await ProcessAttachments(db, rawMessage, messageChanel);
             }

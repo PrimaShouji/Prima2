@@ -1,14 +1,13 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet;
 using Prima.DiscordNet.Attributes;
 using Prima.Resources;
 
 namespace Prima.Application.Commands.FFXIV.BaldesionArsenal;
-
-[Name("Baldesion Arsenal Runs")]
-public class BARunCommands : ModuleBase<SocketCommandContext>
+[Prima.DiscordNet.Attributes.ModuleScope(Prima.DiscordNet.Attributes.ModuleScopeAttribute.ModuleScoping.Guild, GuildId = Prima.Resources.SpecialGuilds.CrystalExploratoryMissions)]
+public class BARunCommands : PrimaInteractionModuleBase
 {
-    [Command("lfgcountsba", RunMode = RunMode.Async)]
+    [SlashCommand("lfgcountsba", "Run the lfgcountsba command.", runMode: RunMode.Async)]
     [Description("Get the LFG role counts of all guild members for the Baldesion Arsenal.")]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
     public Task GetBAProgressionCounts()

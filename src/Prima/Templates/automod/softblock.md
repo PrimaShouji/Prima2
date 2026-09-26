@@ -9,4 +9,4 @@ A potentially-problematic message was posted in #{{.ChannelName}}:
 ```
 [Jump to message]({{.JumpLink}})
 
-If this is a false positive, please remove the pattern with `~softunblocktext <pattern>` and correct it before re-inserting it.
+If this is a false positive, please remove the pattern with `/softunblocktext regex: <pattern>` and correct it before re-inserting it.

@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
+using Discord;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
@@ -12,23 +13,18 @@ namespace Prima.DiscordNet.Attributes
 
         public bool Global { get; set; }
 
-        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override async Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo command, IServiceProvider services)
         {
             var rateLimits = services.GetRequiredService<RateLimitService>();
             if (!rateLimits.IsReady(command))
             {
-                _ = Task.Run(async () =>
-                {
-                    var res = await context.Channel.SendMessageAsync(
-                        $"That command cannot be used for another {rateLimits.TimeUntilReady(command)} seconds.");
-                    await Task.Delay(5000);
-                    await res.DeleteAsync();
-                });
-                return Task.FromResult(PreconditionResult.FromError("Command rate limit has not yet expired."));
+                await context.Interaction.RespondAsync(
+                    $"That command cannot be used for another {rateLimits.TimeUntilReady(command)} seconds.", ephemeral: true);
+                return PreconditionResult.FromError("Command rate limit has not yet expired.");
             }
 
             rateLimits.ResetTime(command, TimeSeconds);
-            return Task.FromResult(PreconditionResult.FromSuccess());
+            return PreconditionResult.FromSuccess();
         }
     }
 }

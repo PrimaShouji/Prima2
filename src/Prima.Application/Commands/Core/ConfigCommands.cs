@@ -1,12 +1,10 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Prima.Models;
 using Prima.Services;
 
 namespace Prima.Application.Commands.Core;
-
-[Name("Configuration")]
-public class ConfigCommands : ModuleBase<SocketCommandContext>
+public class ConfigCommands : PrimaInteractionModuleBase
 {
     private readonly IDbService _db;
 
@@ -15,7 +13,7 @@ public class ConfigCommands : ModuleBase<SocketCommandContext>
         _db = db;
     }
     
-    [Command("configglobal", RunMode = RunMode.Async)]
+    [SlashCommand("configglobal", "Run the configglobal command.", runMode: RunMode.Async)]
     [RequireOwner]
     public async Task ConfigureGlobalAsync(string key, string value)
     {
@@ -30,10 +28,9 @@ public class ConfigCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("configure", RunMode = RunMode.Async)]
-    [Alias("config")]
+    [SlashCommand("configure", "Run the configure command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
-    public async Task ConfigureAsync(string key, [Remainder] string value)
+    public async Task ConfigureAsync(string key, string value)
     {
         try
         {
@@ -46,7 +43,7 @@ public class ConfigCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("setupguild", RunMode = RunMode.Async)]
+    [SlashCommand("setupguild", "Run the setupguild command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
     public async Task SetupGuildAsync()
     {
@@ -54,37 +51,31 @@ public class ConfigCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Guild configuration created.");
     }
 
-    [Command("configurerole", RunMode = RunMode.Async)]
-    [Alias("configrole")]
+    [SlashCommand("configurerole", "Run the configurerole command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
-    public async Task ConfigureRoleAsync(params string[] parameters)
+    public async Task ConfigureRoleAsync(string roleName, IRole role)
     {
-        await _db.ConfigureRole(Context.Guild.Id, string.Join(' ', parameters[..^1]), ulong.Parse(parameters[^1]));
+        await _db.ConfigureRole(Context.Guild.Id, roleName, role.Id);
         await ReplyAsync("Role registered.");
     }
 
-    [Command("deconfigurerole", RunMode = RunMode.Async)]
-    [Alias("deconfigrole")]
+    [SlashCommand("deconfigurerole", "Run the deconfigurerole command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
-    public async Task DeconfigureRoleAsync(params string[] parameters)
+    public async Task DeconfigureRoleAsync(string roleName)
     {
-        await _db.DeconfigureRole(Context.Guild.Id, string.Join(' ', parameters[0..^1]));
+        await _db.DeconfigureRole(Context.Guild.Id, roleName);
         await ReplyAsync("Role deregistered.");
     }
 
-    [Command("configureroleemote", RunMode = RunMode.Async)]
-    [Alias("configroleemote", "configemote")]
+    [SlashCommand("configureroleemote", "Run the configureroleemote command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
-    public async Task ConfigureRoleEmoteAsync(params string[] parameters)
+    public async Task ConfigureRoleEmoteAsync(IRole role, string emote)
     {
-        if (!ulong.TryParse(parameters[0], out var roleId))
-            await ReplyAsync("The role ID is misformatted. Please ensure that it only contains numbers.");
-        await _db.ConfigureRoleEmote(Context.Guild.Id, roleId, parameters[1]);
+        await _db.ConfigureRoleEmote(Context.Guild.Id, role.Id, emote);
         await ReplyAsync("Emote registered.");
     }
 
-    [Command("deconfigureroleemote", RunMode = RunMode.Async)]
-    [Alias("deconfigroleemote", "deconfigemote")]
+    [SlashCommand("deconfigureroleemote", "Run the deconfigureroleemote command.", runMode: RunMode.Async)]
     [RequireUserPermission(GuildPermission.ManageGuild)]
     public async Task DeconfigureRoleEmoteAsync(string emoteId)
     {

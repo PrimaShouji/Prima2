@@ -1,13 +1,12 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using Prima.DiscordNet.Attributes;
 using Prima.Resources;
 
 namespace Prima.Application.Community.CrystalExploratoryMissions;
-
-[Name("CEM FAQ")]
-public class FAQCommands : ModuleBase<SocketCommandContext>
+[Prima.DiscordNet.Attributes.ModuleScope(Prima.DiscordNet.Attributes.ModuleScopeAttribute.ModuleScoping.Guild, GuildId = Prima.Resources.SpecialGuilds.CrystalExploratoryMissions)]
+public class FAQCommands : PrimaInteractionModuleBase
 {
-    [Command("how2lodestone", RunMode = RunMode.Async)]
+    [SlashCommand("how2lodestone", "Run the how2lodestone command.", runMode: RunMode.Async)]
     [Description("Lodestone linking FAQ.")]
     [RateLimit(TimeSeconds = 10, Global = true)]
     [RestrictToGuilds(SpecialGuilds.CrystalExploratoryMissions)]
@@ -20,7 +19,7 @@ public class FAQCommands : ModuleBase<SocketCommandContext>
                           "stuff -- gotta go past the mounts, minions, orchestration list, etc) there will be a \"edit\" " +
                           "pencil like thing, click that and paste the ID number that prima sent you but just in " +
                           "case for you it's this: `123456789012345678` (the numbers) into the \"Character Profile\". " +
-                          "Then follow the steps on doing the `~iam \"Server name\" \"First name\" \"Last name\"` " +
+                          "Then follow the steps on doing `/iam character: World FirstName LastName` " +
                           "of your character command. And that should get you verified. You can delete it afterwards " +
                           "but if you ever need to reverify or something you'll need to do it again with inputting the numbers.");
     }

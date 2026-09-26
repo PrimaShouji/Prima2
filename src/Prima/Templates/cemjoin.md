@@ -2,14 +2,13 @@
  
 This server is set up for people to self-organize for Eureka, Bozja, and other Exploratory Mission content for the Crystal Data Center. Follow the steps below to get started!
  
-:one: If you know your Discord user ID, paste that into your Lodestone bio. In {{.WelcomeChannelLink}}, send the command `~iam World FirstName LastName`
+:one: If you know your Discord user ID, paste that into your Lodestone bio. In {{.WelcomeChannelLink}}, use the `/iam` slash command with your character details
 Example:
 ```yaml
-~iam Balmung S'rinmi Bahxih
+/iam character: Balmung S'rinmi Bahxih
 ```
  
-Note: this is a tilde, not a hyphen.
-If for some reason your messages in this channel cannot be delivered (you'll get a Clyde error), please DM the command to {{.BotMention}} directly.
+Select `/iam` from Discord's command picker and enter your character details in the `character` option.
  
 :two: If this fails because your Discord user ID is missing from your Lodestone bio, you will be messaged your Discord user ID via {{.BotMention}}, so please keep your DMs open. Follow the directions messaged to you in order to verify ownership of your FFXIV character.
  

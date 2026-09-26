@@ -1,4 +1,4 @@
-﻿using Discord.Commands;
+using Discord.Interactions;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,27 +17,21 @@ namespace Prima.DiscordNet.Attributes
             _channelIds = channelIds;
         }
 
-        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override async Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo command, IServiceProvider services)
         {
             if (context.Channel is not IGuildChannel guildChannel || guildChannel.GuildId != GuildId)
             {
-                return Task.FromResult(PreconditionResult.FromSuccess());
+                return PreconditionResult.FromSuccess();
             }
 
             if (!_channelIds.Contains(guildChannel.Id))
             {
-                return Task.FromResult(PreconditionResult.FromSuccess());
+                return PreconditionResult.FromSuccess();
             }
 
-            _ = Task.Run(async () =>
-            {
-                await context.Message.DeleteAsync();
-                var reply = await context.Channel.SendMessageAsync("That command is disabled in this channel.");
-                await Task.Delay(10000).ConfigureAwait(false);
-                await reply.DeleteAsync();
-            });
+            await context.Interaction.RespondAsync("That command is disabled in this channel.", ephemeral: true);
 
-            return Task.FromResult(PreconditionResult.FromError("Command may not be executed in this channel."));
+            return PreconditionResult.FromError("Command may not be executed in this channel.");
 
         }
     }

@@ -1,5 +1,5 @@
-﻿using Discord;
-using Discord.Commands;
+using Discord;
+using Discord.Interactions;
 using Google.Apis.Calendar.v3.Data;
 using Microsoft.Extensions.Logging;
 using Prima.Application.Scheduling;
@@ -13,10 +13,8 @@ using Color = Discord.Color;
 // ReSharper disable MemberCanBePrivate.Global
 
 namespace Prima.Application.Commands.Scheduling;
-
-[Name("Event Scheduling")]
 [RequireContext(ContextType.Guild)]
-public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
+public class EventSchedulingCommands : PrimaInteractionModuleBase
 {
     private readonly ILogger<EventSchedulingCommands> _logger;
     private readonly GoogleCalendarClient _calendar;
@@ -32,9 +30,9 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         _db = db;
     }
 
-    [Command("announce", RunMode = RunMode.Async)]
-    [Description("Announce an event. Usage: `~announce Time | Description`")]
-    public async Task Announce([Remainder] string args)
+    [SlashCommand("announce", "Run the announce command.", runMode: RunMode.Async)]
+    [Description("Announce an event. Enter a time and description separated by |.")]
+    public async Task Announce([Summary("args", "Event time, then |, then event description.")] string args)
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -42,14 +40,11 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         var outputChannel = ScheduleUtils.GetOutputChannel(guildConfig, Context.Guild, Context.Channel);
         var announceChannel = ScheduleUtils.GetAnnouncementChannel(guildConfig, Context.Guild, Context.Channel);
 
-        var prefix = _db.Config.Prefix;
-
         var splitIndex = args.IndexOf("|", StringComparison.Ordinal);
         if (splitIndex == -1)
         {
             await ReplyAsync($"{Context.User.Mention}, please provide parameters with that command.\n" +
-                             "A well-formed command would look something like:\n" +
-                             $"`{prefix}announce 5:00PM | This is a fancy description!`");
+                             "Example: set the `args` option to `5:00PM | This is a fancy description!`");
             return;
         }
 
@@ -90,7 +85,8 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
 #endif
 
         var eventDescription = trimmedDescription +
-                               $"\n\n[Copy to Google Calendar]({eventLink})\nMessage Link: {Context.Message.GetJumpUrl()}";
+                               $"\n\n[Copy to Google Calendar]({eventLink})";
+        var eventId = Context.Interaction.Id;
 
         var member = Context.Guild.GetUser(Context.User.Id);
         var color = RunDisplayTypes.GetColorCastrum();
@@ -103,10 +99,10 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
             .WithTitle(
                 $"Event scheduled by {member?.Nickname ?? Context.User.ToString()} at <t:{time.ToUnixTimeSeconds()}:F>!")
             .WithDescription(eventDescription)
-            .WithFooter(Context.Message.Id.ToString())
+            .WithFooter(eventId.ToString())
             .Build();
 
-        var outputMessage = await outputChannel.SendMessageAsync(Context.Message.Id.ToString(), embed: embed);
+        var outputMessage = await outputChannel.SendMessageAsync(eventId.ToString(), embed: embed);
         if (outputChannel is INewsChannel)
         {
             // We only crosspost the user-facing schedule message on the initial announcement, since we clear the
@@ -117,7 +113,7 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
 
         if (announceChannel is INewsChannel newsChannel)
         {
-            var announceMessage = await newsChannel.SendMessageAsync(Context.Message.Id.ToString(), embed: embed);
+            var announceMessage = await newsChannel.SendMessageAsync(eventId.ToString(), embed: embed);
             await announceMessage.CrosspostSafeAsync(_logger);
         }
 
@@ -133,15 +129,20 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         return events.FirstOrDefault(e => e.Summary == title && e.Start.DateTime == startTime);
     }
 
-    [Command("setruntime")]
+    [SlashCommand("setruntime", "Run the setruntime command.")]
     [RequireUserPermission(GuildPermission.BanMembers)]
     [RequireContext(ContextType.Guild)]
-    public async Task SetRunTimestamp(ulong outputChannelId, ulong eventId, [Remainder] string args)
+    public async Task SetRunTimestamp(ITextChannel outputChannel, string eventIdText,
+        [Summary("args", "New run time.")] string args)
     {
+        if (!ulong.TryParse(eventIdText, out var eventId))
+        {
+            await ReplyAsync("Event ID must contain only digits.");
+            return;
+        }
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
 
-        var outputChannel = Context.Guild.GetTextChannel(outputChannelId);
         var (embedMessage, embed) = await FindAnnouncement(outputChannel, eventId);
         if (embedMessage == null || embed == null)
         {
@@ -181,15 +182,14 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         await ReplyAsync("Updated.");
     }
 
-    [Command("sortembeds", RunMode = RunMode.Async)]
+    [SlashCommand("sortembeds", "Run the sortembeds command.", runMode: RunMode.Async)]
     [RequireContext(ContextType.Guild)]
     [RequireOwner]
-    public async Task SortEmbedsCommand(ulong id)
+    public async Task SortEmbedsCommand(ITextChannel channel)
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
 
-        var channel = Context.Guild.GetTextChannel(id);
         await SortEmbeds(guildConfig, Context.Guild, channel);
         await ReplyAsync("Done!");
     }
@@ -320,17 +320,26 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         return l.StartsWith("Message Link: https://discord");
     }
 
-    [Command("reactions", RunMode = RunMode.Async)]
-    [Description("Get the number of reactions for an announcement.")]
-    public async Task ReactionCount([Remainder] string args)
+    [SlashCommand("reactions", "Run the reactions command.", runMode: RunMode.Async)]
+    [Description("Get announcement reactions by event time or event ID.")]
+    public async Task ReactionCount(
+        [Summary("args", "Event time or event ID shown in an announcement footer.")] string args)
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
 
         var outputChannel = ScheduleUtils.GetOutputChannel(guildConfig, Context.Guild, Context.Channel);
-        var (time, _) = ScheduleUtils.ParseTime(args);
-
-        var (embedMessage, embed) = await FindAnnouncement(outputChannel, Context.User, time);
+        IUserMessage? embedMessage;
+        IEmbed? embed;
+        if (args.Length > 8 && args.All(char.IsDigit))
+        {
+            (embedMessage, embed) = await FindAnnouncementById(outputChannel, Context.User, args);
+        }
+        else
+        {
+            var (time, _) = ScheduleUtils.ParseTime(args);
+            (embedMessage, embed) = await FindAnnouncement(outputChannel, Context.User, time);
+        }
         if (embedMessage != null && embed?.Footer != null &&
             ulong.TryParse(embed.Footer?.Text, out var originalMessageId))
         {
@@ -345,9 +354,10 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("reannounce", RunMode = RunMode.Async)]
-    [Description("Reschedule an announcement. Usage: `~reannounce Old Time | New Time`")]
-    public async Task Reannounce([Remainder] string args)
+    [SlashCommand("reannounce", "Run the reannounce command.", runMode: RunMode.Async)]
+    [Description("Reschedule one of your announcements by time or event ID.")]
+    public async Task Reannounce(
+        [Summary("args", "Old event time or ID, then |, then the new event time.")] string args)
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -359,7 +369,7 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         var times = args.Split('|').Select(a => a.Trim()).ToArray();
         if (times.Length < 2)
         {
-            await ReplyAsync("Failed to read command. Usage: `~reannounce Old Time Or Original Message ID | New Time`");
+            await ReplyAsync("Enter the old event time or ID, then `|`, then the new time in the args option.");
             return;
         }
 
@@ -384,13 +394,6 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
             if (!ulong.TryParse(times[0], out var announceMessageId))
             {
                 await ReplyAsync("Could not read message ID!");
-                return;
-            }
-
-            var announceMessage = await Context.Channel.GetMessageAsync(announceMessageId);
-            if (announceMessage == null)
-            {
-                await ReplyAsync("The message with that ID does not exist in this channel!");
                 return;
             }
 
@@ -481,9 +484,10 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("unannounce", RunMode = RunMode.Async)]
-    [Description("Cancel an event. Usage: `~unannounce Time`")]
-    public async Task Unannounce([Remainder] string args)
+    [SlashCommand("unannounce", "Run the unannounce command.", runMode: RunMode.Async)]
+    [Description("Cancel one of your announcements by time or event ID.")]
+    public async Task Unannounce(
+        [Summary("args", "Event time or event ID shown in an announcement footer.")] string args)
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -505,13 +509,6 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
             if (!ulong.TryParse(splitArgs[0], out var announceMessageId))
             {
                 await ReplyAsync("Could not read message ID!");
-                return;
-            }
-
-            var announceMessage = await Context.Channel.GetMessageAsync(announceMessageId);
-            if (announceMessage == null)
-            {
-                await ReplyAsync("The message with that ID does not exist in this channel!");
                 return;
             }
 
@@ -611,9 +608,9 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("drsruns")]
+    [SlashCommand("drsruns", "Run the drsruns command.")]
     [Description("Lists the estimated number of runs of each type for Delubrum Reginae (Savage) right now.")]
-    public async Task ListDRSRunCountsByType([Remainder] string args = "")
+    public async Task ListDRSRunCountsByType(string args = "")
     {
         var guildConfig = _db.Guilds.FirstOrDefault(g => g.Id == Context.Guild.Id);
         if (guildConfig == null) return;
@@ -722,30 +719,7 @@ public class EventSchedulingCommands : ModuleBase<SocketCommandContext>
                 return announcements[0];
             default:
             {
-                var query = "Multiple runs at that time were found; which one would you like to select?";
-                for (var i = 0; i < announcements.Count; i++)
-                {
-                    query += $"\n{i + 1}) {announcements[i].Item1.GetJumpUrl()}";
-                }
-
-                await ReplyAsync(query);
-
-                var j = -1;
-                const int stopPollingDelayMs = 250;
-                for (var i = 0; i < (5 * 60000) / stopPollingDelayMs; i++)
-                {
-                    var newMessages = await Context.Channel.GetMessagesAsync(limit: 1).FlattenAsync();
-                    var newMessage = newMessages.FirstOrDefault(m => m.Author.Id == Context.User.Id);
-                    if (newMessage != null && int.TryParse(newMessage.Content, out j))
-                    {
-                        break;
-                    }
-
-                    await Task.Delay(stopPollingDelayMs);
-                }
-
-                if (j != -1) return announcements[j - 1];
-                await ReplyAsync("No response received; cancelling...");
+                await ReplyAsync("Multiple runs match that time. Specify the event ID shown in an announcement footer.");
                 return (null, null);
             }
         }
