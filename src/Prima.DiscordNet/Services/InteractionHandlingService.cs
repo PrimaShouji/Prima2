@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -14,8 +15,11 @@ namespace Prima.DiscordNet.Services
     {
         private readonly DiscordSocketClient _client;
         private readonly InteractionService _handler;
+        private readonly InteractionInitializationCoordinator _initializer;
         private readonly ILogger<InteractionHandlingService> _logger;
         private readonly IServiceProvider _services;
+        private IReadOnlyDictionary<ulong, ModuleInfo[]> _guildModules;
+        private ModuleInfo[] _globalModules;
 
         public InteractionHandlingService(DiscordSocketClient client, InteractionService handler,
             ILogger<InteractionHandlingService> logger, IServiceProvider services)
@@ -24,9 +28,15 @@ namespace Prima.DiscordNet.Services
             _handler = handler;
             _logger = logger;
             _services = services;
+            _initializer = new InteractionInitializationCoordinator(SetupAsync, RegisterCommandsAsync);
         }
 
-        public async Task InitializeAsync(Assembly assembly = null)
+        public Task InitializeAsync(Assembly assembly = null)
+        {
+            return _initializer.InitializeAsync(assembly ?? Assembly.GetEntryAssembly());
+        }
+
+        private async Task SetupAsync(Assembly assembly)
         {
             _client.InteractionCreated += HandleInteraction;
             _handler.SlashCommandExecuted += async (_, context, result) =>
@@ -51,7 +61,7 @@ namespace Prima.DiscordNet.Services
                     await context.Interaction.FollowupAsync("Failed to process interaction.", ephemeral: true);
                 }
             };
-            var modules = await _handler.AddModulesAsync(assembly ?? Assembly.GetEntryAssembly(), _services);
+            var modules = await _handler.AddModulesAsync(assembly, _services);
             var scopedModules = modules
                 .Select(m => new
                 {
@@ -60,18 +70,26 @@ namespace Prima.DiscordNet.Services
                 })
                 .ToList();
 
-            var guildModules = scopedModules
+            _guildModules = scopedModules
                 .Where(pair => pair.Scope?.Scope == ModuleScopeAttribute.ModuleScoping.Guild)
                 .GroupBy(pair => pair.Scope.GuildId)
-                .ToDictionary(group => group.Key, group => group.ToArray());
-            foreach (var (guildId, moduleGroup) in guildModules)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(pair => pair.Module).ToArray());
+            _globalModules = scopedModules
+                .Where(pair => pair.Scope?.Scope != ModuleScopeAttribute.ModuleScoping.Guild)
+                .Select(pair => pair.Module)
+                .ToArray();
+        }
+
+        private async Task RegisterCommandsAsync()
+        {
+            foreach (var (guildId, modules) in _guildModules)
             {
-                await _handler.AddModulesToGuildAsync(guildId, true, moduleGroup.Select(pair => pair.Module).ToArray());
+                await _handler.AddModulesToGuildAsync(guildId, true, modules);
             }
 
-            var globalModules = scopedModules
-                .Where(pair => pair.Scope?.Scope != ModuleScopeAttribute.ModuleScoping.Guild);
-            await _handler.AddModulesGloballyAsync(true, globalModules.Select(pair => pair.Module).ToArray());
+            await _handler.AddModulesGloballyAsync(true, _globalModules);
         }
 
         private async Task HandleInteraction(SocketInteraction interaction)
@@ -146,6 +164,41 @@ namespace Prima.DiscordNet.Services
                     }
                 }
             }
+        }
+    }
+
+    internal sealed class InteractionInitializationCoordinator
+    {
+        private readonly Func<Task> _registerAsync;
+        private readonly Func<Assembly, Task> _setupAsync;
+        private readonly object _syncRoot = new();
+        private Task _registrationTask;
+        private Task _setupTask;
+
+        public InteractionInitializationCoordinator(Func<Assembly, Task> setupAsync, Func<Task> registerAsync)
+        {
+            _setupAsync = setupAsync;
+            _registerAsync = registerAsync;
+        }
+
+        public Task InitializeAsync(Assembly assembly)
+        {
+            lock (_syncRoot)
+            {
+                _setupTask ??= _setupAsync(assembly);
+                if (_registrationTask == null || _registrationTask.IsFaulted || _registrationTask.IsCanceled)
+                {
+                    _registrationTask = RegisterAfterSetupAsync(_setupTask);
+                }
+
+                return _registrationTask;
+            }
+        }
+
+        private async Task RegisterAfterSetupAsync(Task setupTask)
+        {
+            await setupTask;
+            await _registerAsync();
         }
     }
 }
